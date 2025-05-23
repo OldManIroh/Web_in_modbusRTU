@@ -1,5 +1,8 @@
 #include <ETH.h>
 #include <WiFiClient.h>
+#include <Arduino.h>
+#include <ModbusRTU.h>
+
 // Настройки сети
 IPAddress localIP(10, 190, 195, 202);
 IPAddress gateway(10, 190, 195, 254);
@@ -20,9 +23,15 @@ const int ARRAY_SIZE = 115;
 uint32_t hexArray[ARRAY_SIZE] = {0};
 int currentIndex = 0;
 
+// настройки для modbus
+#define SLAVE_ADDR 15
+#define DE_RE_PIN 4  // Пин управления направлением RS485
+
+ModbusRTU mb;
+
 void setup() {
   Serial.begin(115200);
-  
+  Serial2.begin(115200, SERIAL_8N1, 5, 17);  // UART2: RX=5, TX=17
   // Инициализация Ethernet
   ETH.begin();
   ETH.config(localIP, gateway, subnet);
@@ -32,6 +41,15 @@ void setup() {
     Serial.print(".");
   }
   Serial.println("\nEthernet подключен!");
+
+  mb.begin(&Serial2, DE_RE_PIN);  // Инициализация Modbus с управлением DE/RE
+  mb.setBaudrate(115200);         // Установка битрейта
+  mb.slave(SLAVE_ADDR);           // Установка адреса Slave
+
+  // Регистрация обработчика для Holding Registers
+  mb.addHreg(16791, 1234);     // Инициализация регистра значением 1234
+
+  Serial.println("Modbus RTU Slave Started");
 }
 
 void sendRequest() {
@@ -90,6 +108,24 @@ bool parseHexBlock(const String &block, uint32_t &result) {
 }
 
 
+// Внесение в нужный регистр нужное значение
+void modbusReg (uint32_t hexdecArray[]){
+  if (hexdecArray[114] == 28){
+    mb.Hreg(16791, 9);
+  }
+  if (hexdecArray[114] == 21){
+    mb.Hreg(16791, 5);
+  }
+  if (hexdecArray[114] == 8 || 9){
+    mb.Hreg(16791, 12);
+  }
+  if (hexdecArray[114] == 16){
+    mb.Hreg(16791, 7);
+  }
+  mb.Hreg(16389, hexdecArray[0]);
+  mb.Hreg(16387, hexdecArray[1]);
+}
+
 void parseData(const String &rawData) {
   String cleanData = rawData;
   cleanData.replace("X", "");
@@ -123,6 +159,8 @@ void parseData(const String &rawData) {
     Serial.println(")");
   }
 }
+
+
 
 
 
