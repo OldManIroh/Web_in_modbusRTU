@@ -47,7 +47,9 @@ void setup() {
   mb.slave(SLAVE_ADDR);           // Установка адреса Slave
 
   // Регистрация обработчика для Holding Registers
-  mb.addHreg(16791, 1234);     // Инициализация регистра значением 1234
+  mb.addHreg(16790, 1234);     // Инициализация регистра значением 1234
+  mb.addHreg(16388, 1234);
+  mb.addHreg(16386, 1234);
 
   Serial.println("Modbus RTU Slave Started");
 }
@@ -108,23 +110,7 @@ bool parseHexBlock(const String &block, uint32_t &result) {
 }
 
 
-// Внесение в нужный регистр нужное значение
-void modbusReg (uint32_t hexdecArray[]){
-  if (hexdecArray[114] == 28){
-    mb.Hreg(16791, 9);
-  }
-  if (hexdecArray[114] == 21){
-    mb.Hreg(16791, 5);
-  }
-  if (hexdecArray[114] == 8 || 9){
-    mb.Hreg(16791, 12);
-  }
-  if (hexdecArray[114] == 16){
-    mb.Hreg(16791, 7);
-  }
-  mb.Hreg(16389, hexdecArray[0]);
-  mb.Hreg(16387, hexdecArray[1]);
-}
+
 
 void parseData(const String &rawData) {
   String cleanData = rawData;
@@ -145,6 +131,23 @@ void parseData(const String &rawData) {
       Serial.print("Ошибка конвертации: ");
       Serial.println(hexPart);
     }
+
+
+
+  if (hexArray[114] == 28){
+    mb.Hreg(16790, 9);
+  }
+  if (hexArray[114] == 21){
+    mb.Hreg(16790, 5);
+  }
+  if (hexArray[114] == 8 || hexArray[114] == 9){
+    mb.Hreg(16790, 12);
+  }
+  if (hexArray[114] == 16){
+    mb.Hreg(16790, 7);
+  }
+  mb.Hreg(16388, hexArray[0]);
+  mb.Hreg(16386, hexArray[1]);
   }
 
   // Вывод массива
@@ -158,14 +161,14 @@ void parseData(const String &rawData) {
     Serial.print(hexArray[i]);
     Serial.println(")");
   }
+
+
 }
 
 
 
-
-
-
 void loop() {
+  mb.task();
   if (millis() - lastRequestTime >= requestInterval) {
     if (client.connected()) client.stop();
     
