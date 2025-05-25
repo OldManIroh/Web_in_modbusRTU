@@ -14,6 +14,11 @@ const int serverPort = 80;
 const char* payload = "QUESTION=30020130020330020830030130030230030330030430030630030730030830030930030a300701300702300703300704300707300708300709300714300715300716300501300502300503300504300505300506300507300508300509300e03300e2a31130131130331130431130531130731130831130931130a31130b31130c31130d31130e31130f31131031131131131231131331131431131531131631131731131831131931131a31131b31131c31131d31131e31131f31132031132131132231132331132431132531132631132731132831132931132a31132b31132c31132d31132e31132f31133031133131133231133331133431133531133631133731133831133931133a31133b31133c31133d31133e31133f31134031134131134231134331134431134531134631134731134831134931134a31134b31134c31134d31134e31134f31135031135131135231135331135431135531135631135731135831135931135a31135b31135c31135d31135e31135f31136031136131136231136331136431136531136631136731140131140231140331140431140531140631140731140831140931140a31140b31140c31140d31140e31140f311410311411311412300901300906300907300908300909300108"; // Полный payload из вашего запроса
 // const char* payload = "QUESTION=3002013002"; // Полный payload из вашего запроса
 
+// Holding Registers со сдвигом на 1 регистр меньше
+const int maschineState = 16790; //статус
+const int pressure = 16388; //давление
+const int temperature = 16386; //темперетура
+
 WiFiClient client;
 unsigned long lastRequestTime = 0;
 const long requestInterval = 10000; // 10 секунд
@@ -46,10 +51,10 @@ void setup() {
   mb.setBaudrate(115200);         // Установка битрейта
   mb.slave(SLAVE_ADDR);           // Установка адреса Slave
 
-  // Регистрация обработчика для Holding Registers
-  mb.addHreg(16790, 1234);     // Инициализация регистра значением 1234
-  mb.addHreg(16388, 1234);
-  mb.addHreg(16386, 1234);
+  // Регистрация обработчика для Holding Registers со сдвигом на 1 регистр меньше
+  mb.addHreg(maschineState, 1234);     // Инициализация регистра значением 1234
+  mb.addHreg(pressure, 1234);
+  mb.addHreg(temperature, 1234);
 
   Serial.println("Modbus RTU Slave Started");
 }
@@ -135,19 +140,19 @@ void parseData(const String &rawData) {
 
 
   if (hexArray[114] == 28){
-    mb.Hreg(16790, 9);
+    mb.Hreg(maschineState, 9);
   }
   if (hexArray[114] == 21){
-    mb.Hreg(16790, 5);
+    mb.Hreg(maschineState, 5);
   }
   if (hexArray[114] == 8 || hexArray[114] == 9){
-    mb.Hreg(16790, 12);
+    mb.Hreg(maschineState, 12);
   }
   if (hexArray[114] == 16){
-    mb.Hreg(16790, 7);
+    mb.Hreg(maschineState, 7);
   }
-  mb.Hreg(16388, hexArray[0]);
-  mb.Hreg(16386, hexArray[1]);
+  mb.Hreg(pressure, hexArray[0]);
+  mb.Hreg(temperature, hexArray[1]);
   }
 
   // Вывод массива
