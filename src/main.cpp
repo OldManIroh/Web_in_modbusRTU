@@ -16,8 +16,8 @@ const char* payload = "QUESTION=300201300203300208300301300302300303300304300306
 
 // Holding Registers со сдвигом на 1 регистр меньше
 const int maschineState = 16790; //статус
-const int pressure = 16388; //давление
-const int temperature = 16386; //темперетура
+const int regPressure = 16389; //давление
+const int regTemperature = 16386; //темперетура
 
 WiFiClient client;
 unsigned long lastRequestTime = 0;
@@ -33,6 +33,14 @@ int currentIndex = 0;
 #define DE_RE_PIN 4  // Пин управления направлением RS485
 
 ModbusRTU mb;
+
+union 
+{
+  uint16_t reg[2];
+  uint32_t u32;
+  /* data */
+} dataConverter;
+
 
 void setup() {
   Serial.begin(115200);
@@ -52,9 +60,14 @@ void setup() {
   mb.slave(SLAVE_ADDR);           // Установка адреса Slave
 
   // Регистрация обработчика для Holding Registers со сдвигом на 1 регистр меньше
-  mb.addHreg(maschineState, 1234);     // Инициализация регистра значением 1234
-  mb.addHreg(pressure, 1234);
-  mb.addHreg(temperature, 1234);
+  mb.addHreg(maschineState, 1234); 
+
+      // Инициализация регистра значением 1234
+  mb.addHreg(regPressure, 1234);
+  mb.addHreg(regPressure + 1, 0);
+   
+  mb.addHreg(regTemperature, 1234);
+  mb.addHreg(regTemperature + 1, 0);
 
   Serial.println("Modbus RTU Slave Started");
 }
@@ -151,8 +164,18 @@ void parseData(const String &rawData) {
   if (hexArray[114] == 16){
     mb.Hreg(maschineState, 7);
   }
-  mb.Hreg(pressure, hexArray[0]);
-  mb.Hreg(temperature, hexArray[1]);
+
+  
+  dataConverter.u32 = hexArray[0];
+  
+  mb.Hreg(regPressure, dataConverter.reg[0]);
+  mb.Hreg(regPressure + 1, dataConverter.reg[1]);
+
+  int tempInArray = hexArray[1] * 100;
+  dataConverter.u32 = tempInArray;
+
+  mb.Hreg(regTemperature, dataConverter.reg[1]);
+  mb.Hreg(regTemperature + 1,  dataConverter.reg[0]);
   }
 
   // Вывод массива
