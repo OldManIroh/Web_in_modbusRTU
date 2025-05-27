@@ -15,9 +15,19 @@ const char* payload = "QUESTION=300201300203300208300301300302300303300304300306
 // const char* payload = "QUESTION=3002013002"; // Полный payload из вашего запроса
 
 // Holding Registers со сдвигом на 1 регистр меньше
-const int maschineState = 16790; //статус
-const int regPressure = 16389; //давление
-const int regTemperature = 16386; //темперетура
+const int maschineState = 16790; //статус 16791
+
+const int regPressure = 16389; //давление 
+
+const int regTemperature = 16386; //темперетура 16387
+
+const int regFullTime = 16398; //общее время 16399
+const int regLoadedOrNonLoadedTime = 16401; //время в/без загрузке 16401
+const int regLoadedTime = 16403; //время в нагрузки 16403
+
+const int regPodship = 16408; //обслуживание подшипников 16409
+const int regOil = 16409; //замена масла 16410
+const int regSepar =16410; //обслуж сепаратора 16411
 
 WiFiClient client;
 unsigned long lastRequestTime = 0;
@@ -43,7 +53,7 @@ union
 
 
 void setup() {
-  Serial.begin(115200);
+  // Serial.begin(115200);
   Serial2.begin(115200, SERIAL_8N1, 5, 17);  // UART2: RX=5, TX=17
   // Инициализация Ethernet
   ETH.begin();
@@ -51,9 +61,9 @@ void setup() {
   
   while (!ETH.linkUp()) {
     delay(500);
-    Serial.print(".");
+    // Serial.print(".");
   }
-  Serial.println("\nEthernet подключен!");
+  // Serial.println("\nEthernet подключен!");
 
   mb.begin(&Serial2, DE_RE_PIN);  // Инициализация Modbus с управлением DE/RE
   mb.setBaudrate(115200);         // Установка битрейта
@@ -69,7 +79,22 @@ void setup() {
   mb.addHreg(regTemperature, 1234);
   mb.addHreg(regTemperature + 1, 0);
 
-  Serial.println("Modbus RTU Slave Started");
+  mb.addHreg(regFullTime, 1234);
+  mb.addHreg(regFullTime + 1, 0);
+
+  mb.addHreg(regLoadedOrNonLoadedTime, 1234);
+  mb.addHreg(regLoadedOrNonLoadedTime + 1, 0);
+
+  mb.addHreg(regLoadedTime, 1234);
+  mb.addHreg(regLoadedTime + 1, 0);
+
+  mb.addHreg(regPodship, 1234);
+
+  mb.addHreg(regOil, 1234);
+
+  mb.addHreg(regSepar, 1234);
+
+  // Serial.println("Modbus RTU Slave Started");
 }
 
 void sendRequest() {
@@ -85,10 +110,10 @@ void sendRequest() {
     client.println();
     client.println(payload);
     
-    Serial.println("Запрос отправлен");
-  } else {
-    Serial.println("Ошибка подключения");
-  }
+    // Serial.println("Запрос отправлен");
+  // } else {
+  //   Serial.println("Ошибка подключения");
+   }
 }
 
 String readChunkedResponse() {
@@ -141,7 +166,7 @@ void parseData(const String &rawData) {
     String block = cleanData.substring(i, i + 8);
     String hexPart = block.endsWith("0080") ? block.substring(0,4) : block;
 
-    // Конвертация и запись в массив
+   // Конвертация и запись в массив
     uint32_t value;
     if (parseHexBlock(hexPart, value)) {
       hexArray[currentIndex++] = value;
@@ -158,7 +183,7 @@ void parseData(const String &rawData) {
   if (hexArray[114] == 21){
     mb.Hreg(maschineState, 5);
   }
-  if (hexArray[114] == 8 || hexArray[114] == 9){
+  if (hexArray[114] == 8 || hexArray[114] == 9 || hexArray[114]== 3){
     mb.Hreg(maschineState, 12);
   }
   if (hexArray[114] == 16){
@@ -176,9 +201,37 @@ void parseData(const String &rawData) {
 
   mb.Hreg(regTemperature, dataConverter.reg[1]);
   mb.Hreg(regTemperature + 1,  dataConverter.reg[0]);
-  }
 
-  // Вывод массива
+  // 12 индекс это общее время нужно делить на 3600 скорее всего
+
+  int fullTime = round(hexArray[19] / 3600);//index 12
+  dataConverter.u32 = fullTime;
+  mb.Hreg(regFullTime, dataConverter.reg[1]);
+  mb.Hreg(regFullTime + 1, dataConverter.reg[0]);
+
+  int loadedOrNonLoadedTime = round(hexArray[12] / 3600);//index 13
+  dataConverter.u32 = loadedOrNonLoadedTime;
+  mb.Hreg(regLoadedOrNonLoadedTime, dataConverter.reg[0]);
+  mb.Hreg(regLoadedOrNonLoadedTime + 1, dataConverter.reg[1]);
+
+  int loadedTime = round(hexArray[13] / 3600);
+  dataConverter.u32 = loadedTime;
+  mb.Hreg(regLoadedTime, dataConverter.reg[0]);
+  mb.Hreg(regLoadedTime + 1, dataConverter.reg[1]);
+
+  // идекс 110, 111, 112, 113
+  int podship = 20000 - round(hexArray[113] / 3600);
+  mb.Hreg(regPodship, podship);
+
+  int oil = 2000 - round(hexArray[110] / 3600);
+  mb.Hreg(regOil, oil);
+
+  int separ = 4000 - round(hexArray[111] / 3600);
+  mb.Hreg(regSepar, separ);
+  }
+  
+
+ /* // Вывод массива для отладки
   Serial.println("\nМассив HEX значений:");
   for (int i = 0; i < currentIndex; i++) {
     Serial.print("Index ");
@@ -188,7 +241,7 @@ void parseData(const String &rawData) {
     Serial.print(" (DEC: ");
     Serial.print(hexArray[i]);
     Serial.println(")");
-  }
+  }*/
 
 
 }
