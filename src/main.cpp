@@ -104,8 +104,6 @@ void sendRequest() {
     client.println("Host: 10.190.195.201");
     client.println("Content-Type: application/x-www-form-urlencoded; charset=UTF-8");
     client.println("X-Requested-With: XMLHttpRequest");
-    client.println("Cookie: LangName=Russian");
-    client.println("Connection: close");
     client.print("Content-Length: ");
     client.println(strlen(payload));
     client.println();
@@ -256,11 +254,12 @@ void loop() {
     
     sendRequest();
     lastRequestTime = millis();
-  }
+  
 
   if (client.available()) {
     String response = readChunkedResponse();
     parseData(response);
     client.stop();
+  }
   }
 }
