@@ -33,7 +33,7 @@ const int regSepar =16410; //обслуж сепаратора 16411
 WiFiClient client;
 unsigned long lastRequestTime = 0;
 const long requestInterval = 20000; // 10 секунд
-
+const uint32_t CONNECTION_TIMEOUT = 120000;
 // Массив для хранения HEX-чисел в числовом формате
 const int ARRAY_SIZE = 10;
 uint32_t hexArray[ARRAY_SIZE] = {0};
@@ -62,9 +62,9 @@ void setup() {
   
   while (!ETH.linkUp()) {
     delay(500);
-    // Serial.print(".");
+    Serial.print(".");
   }
-  // Serial.println("\nEthernet подключен!");
+  Serial.println("\nEthernet подключен!");
 
   mb.begin(&Serial2, DE_RE_PIN);  // Инициализация Modbus с управлением DE/RE
   mb.setBaudrate(115200);         // Установка битрейта
@@ -102,16 +102,16 @@ void sendRequest() {
   if (client.connect(serverIP, serverPort)) {
     client.println("POST /cgi-bin/mkv.cgi HTTP/1.1");
     client.println("Host: 10.190.195.201");
-    client.println("Content-Type: application/x-www-form-urlencoded; charset=UTF-8");
-    client.println("X-Requested-With: XMLHttpRequest");
+    client.println("Connection: keep-alive");
+    client.println("Content-Type: application/x-www-form-urlencoded");
     client.print("Content-Length: ");
     client.println(strlen(payload));
     client.println();
     client.println(payload);
     
-    // Serial.println("Запрос отправлен");
-  // } else {
-    // Serial.println("Ошибка подключения");
+    Serial.println("Запрос отправлен");
+  } else {
+    Serial.println("Ошибка подключения");
    }
 }
 
@@ -156,7 +156,6 @@ bool parseHexBlock(const String &block, uint32_t &result) {
 
 void parseData(const String &rawData) {
   String cleanData = rawData;
-  cleanData.replace("X", "");
   cleanData.trim();
   currentIndex = 0;
 
@@ -170,8 +169,8 @@ void parseData(const String &rawData) {
     if (parseHexBlock(hexPart, value)) {
       hexArray[currentIndex++] = value;
     } else {
-      // Serial.print("Ошибка конвертации: ");
-      // Serial.println(hexPart);
+      Serial.print("Ошибка конвертации: ");
+      Serial.println(hexPart);
     }
 
 
@@ -231,16 +230,16 @@ void parseData(const String &rawData) {
   
 
 //  // Вывод массива для отладки
-//   Serial.println("\nМассив HEX значений:");
-//   for (int i = 0; i < currentIndex; i++) {
-//     Serial.print("Index ");
-//     Serial.print(i);
-//     Serial.print(": 0x");
-//     Serial.print(hexArray[i], HEX); // Вывод в HEX-формате
-//     Serial.print(" (DEC: ");
-//     Serial.print(hexArray[i]);
-//     Serial.println(")");
-//   }
+  Serial.println("\nМассив HEX значений:");
+  for (int i = 0; i < currentIndex; i++) {
+    Serial.print("Index ");
+    Serial.print(i);
+    Serial.print(": 0x");
+    Serial.print(hexArray[i], HEX); // Вывод в HEX-формате
+    Serial.print(" (DEC: ");
+    Serial.print(hexArray[i]);
+    Serial.println(")");
+  }
 
 
 }
@@ -249,17 +248,33 @@ void parseData(const String &rawData) {
 
 void loop() {
   mb.task();
-  if (millis() - lastRequestTime >= requestInterval) {
-    if (client.connected()) client.stop();
-    
+
+  if (millis() - lastRequestTime >= requestInterval){
     sendRequest();
     lastRequestTime = millis();
-  
+  }
 
-  if (client.available()) {
+  if(client.available()) {
     String response = readChunkedResponse();
     parseData(response);
+  }
+
+  if(millis() - lastRequestTime > CONNECTION_TIMEOUT){
+    Serial.println("Таймаут соединения");
     client.stop();
   }
-  }
+
+  // if (millis() - lastRequestTime >= requestInterval) {
+  //   if (client.connected()) client.stop();
+    
+  //   sendRequest();
+  //   lastRequestTime = millis();
+  // }
+
+  // if (client.available()) {
+  //   String response = readChunkedResponse();
+  //   parseData(response);
+  //   client.stop();
+  // }
+  
 }
