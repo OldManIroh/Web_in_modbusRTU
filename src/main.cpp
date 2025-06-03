@@ -102,8 +102,13 @@ void sendRequest() {
   if (client.connect(serverIP, serverPort)) {
     client.println("POST /cgi-bin/mkv.cgi HTTP/1.1");
     client.println("Host: 10.190.195.201");
+<<<<<<< HEAD
     client.println("Connection: keep-alive");
     client.println("Content-Type: application/x-www-form-urlencoded");
+=======
+    client.println("Content-Type: application/x-www-form-urlencoded; charset=UTF-8");
+    client.println("X-Requested-With: XMLHttpRequest");
+>>>>>>> 06c8f1fb7e1e1455be509ecdef0d456cf9d3f731
     client.print("Content-Length: ");
     client.println(strlen(payload));
     client.println();
@@ -252,7 +257,7 @@ void loop() {
   if (millis() - lastRequestTime >= requestInterval){
     sendRequest();
     lastRequestTime = millis();
-  }
+  
 
   if(client.available()) {
     String response = readChunkedResponse();
@@ -263,6 +268,7 @@ void loop() {
     Serial.println("Таймаут соединения");
     client.stop();
   }
+<<<<<<< HEAD
 
   // if (millis() - lastRequestTime >= requestInterval) {
   //   if (client.connected()) client.stop();
@@ -277,4 +283,7 @@ void loop() {
   //   client.stop();
   // }
   
+=======
+  }
+>>>>>>> 06c8f1fb7e1e1455be509ecdef0d456cf9d3f731
 }
